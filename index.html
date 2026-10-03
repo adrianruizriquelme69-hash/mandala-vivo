@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mandala vivo</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0b14;color:#eee;font-family:system-ui,sans-serif;overflow:hidden}
+  canvas{display:block;touch-action:none;cursor:crosshair}
+  #bar{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;
+       background:#1a1a2ecc;padding:8px 12px;border-radius:12px;backdrop-filter:blur(6px)}
+  button,label{font:inherit;font-size:14px}
+  button{background:#2d2d4d;color:#eee;border:0;padding:6px 12px;border-radius:8px;cursor:pointer}
+  button:hover{background:#44447a}
+  input[type=range]{width:90px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="bar">
+  <label>Ejes <input id="ejes" type="range" min="2" max="16" value="8"></label>
+  <label>Grosor <input id="grosor" type="range" min="1" max="12" value="3"></label>
+  <button id="espejo">Espejo: sí</button>
+  <button id="borrar">Borrar</button>
+  <button id="guardar">Guardar PNG</button>
+</div>
+<script>
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+let espejo = true, hue = 0, dibujando = false, ultimo = null;
+function ajustar(){
+  const img = c.width && c.height ? ctx.getImageData(0,0,c.width,c.height) : null;
+  c.width = innerWidth; c.height = innerHeight;
+  fondo(); if(img) ctx.putImageData(img,0,0);
+}
+function fondo(){ ctx.fillStyle = '#0b0b14'; ctx.fillRect(0,0,c.width,c.height); }
+addEventListener('resize', ajustar); ajustar();
+
+function trazo(a, b){
+  const n = +ejes.value, cx = c.width/2, cy = c.height/2;
+  ctx.lineWidth = +grosor.value; ctx.lineCap = 'round';
+  ctx.strokeStyle = `hsl(${hue},90%,62%)`;
+  ctx.shadowBlur = 8; ctx.shadowColor = ctx.strokeStyle;
+  for(let i=0;i<n;i++){
+    const ang = i*2*Math.PI/n;
+    for(const f of (espejo?[1,-1]:[1])){
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(ang); ctx.scale(1,f);
+      ctx.beginPath(); ctx.moveTo(a.x-cx,a.y-cy); ctx.lineTo(b.x-cx,b.y-cy); ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+function pos(e){ return {x:e.clientX, y:e.clientY}; }
+c.addEventListener('pointerdown', e=>{ dibujando = true; ultimo = pos(e); });
+addEventListener('pointerup', ()=> dibujando = false);
+c.addEventListener('pointermove', e=>{
+  if(!dibujando) return;
+  const p = pos(e); hue = (hue+2)%360; trazo(ultimo,p); ultimo = p;
+});
+const espejo_btn = document.getElementById('espejo');
+espejo_btn.onclick = ()=>{ espejo = !espejo; espejo_btn.textContent = 'Espejo: ' + (espejo?'sí':'no'); };
+document.getElementById('borrar').onclick = fondo;
+document.getElementById('guardar').onclick = ()=>{
+  const a = document.createElement('a'); a.download = 'mandala.png'; a.href = c.toDataURL(); a.click();
+};
+</script>
+</body>
+</html>
